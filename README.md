@@ -8,10 +8,13 @@ Give an operations stakeholder a quick view of illustrative KPIs, trends, alerts
 ## Features
 - KPI summary cards
 - Trend chart from clearly labelled mock data
-- Searchable/filterable records table
-- Status filter and alerts
+- Searchable and filterable initiative tracker with an add-initiative form
+- Team summaries derived from the initiative records, with links to team initiatives
+- Reports view with status filters and CSV export
+- Settings view for the demo workspace name and session-only notification preferences
+- Status alerts and attention indicators
 - Empty search state
-- Responsive sidebar and content layout
+- Responsive, keyboard-operable workspace navigation
 
 ## Tech stack
 - React + TypeScript
@@ -40,6 +43,7 @@ Record the actual output and any issues in `docs/TESTING.md`. Do not claim a tes
 
 ## Project limitations
 - This is a frontend demonstration using local state and/or clearly identified mock data.
+- Initiative changes and workspace preferences are held in React state for the current browser session only; they are not persisted to a server.
 - No real payment processing, production API, user account backend, or server persistence is configured.
 - Browser local storage (where used) is only for this demo; it is not a secure or shared database.
 

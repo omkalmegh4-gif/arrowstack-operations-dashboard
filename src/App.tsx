@@ -1,33 +1,524 @@
-import { useMemo, useState } from "react";
-import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, CheckCircle2, Search, Users, Wallet } from "lucide-react";
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  CheckCircle2,
+  Download,
+  Plus,
+  Search,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-type RecordRow = { id: string; team: string; owner: string; status: "On track" | "At risk" | "Delayed"; progress: number; updated: string };
-const records: RecordRow[] = [
- {id:"OPS-104",team:"Customer success",owner:"A. Shah",status:"On track",progress:86,updated:"Today"},
- {id:"OPS-105",team:"Platform",owner:"R. Patil",status:"At risk",progress:58,updated:"Today"},
- {id:"OPS-106",team:"Fulfilment",owner:"M. Rao",status:"Delayed",progress:32,updated:"Yesterday"},
- {id:"OPS-107",team:"Growth",owner:"S. Joshi",status:"On track",progress:91,updated:"Yesterday"},
- {id:"OPS-108",team:"Finance",owner:"K. Deshmukh",status:"At risk",progress:64,updated:"2 days ago"},
- {id:"OPS-109",team:"Platform",owner:"N. More",status:"On track",progress:78,updated:"2 days ago"}
+type Status = "On track" | "At risk" | "Delayed";
+type RecordRow = { id: string; team: string; owner: string; status: Status; progress: number; updated: string };
+type View = "Overview" | "Initiatives" | "Teams" | "Reports" | "Settings";
+type Preferences = { workspaceName: string; weeklySummary: boolean; priorityAlerts: boolean };
+
+const initialRecords: RecordRow[] = [
+  { id: "OPS-104", team: "Customer success", owner: "A. Shah", status: "On track", progress: 86, updated: "Today" },
+  { id: "OPS-105", team: "Platform", owner: "R. Patil", status: "At risk", progress: 58, updated: "Today" },
+  { id: "OPS-106", team: "Fulfilment", owner: "M. Rao", status: "Delayed", progress: 32, updated: "Yesterday" },
+  { id: "OPS-107", team: "Growth", owner: "S. Joshi", status: "On track", progress: 91, updated: "Yesterday" },
+  { id: "OPS-108", team: "Finance", owner: "K. Deshmukh", status: "At risk", progress: 64, updated: "2 days ago" },
+  { id: "OPS-109", team: "Platform", owner: "N. More", status: "On track", progress: 78, updated: "2 days ago" },
 ];
-const trend = [{month:"Jan",value:42},{month:"Feb",value:48},{month:"Mar",value:45},{month:"Apr",value:57},{month:"May",value:62},{month:"Jun",value:68}];
-export default function App() {
- const [query,setQuery] = useState("");
- const [status,setStatus] = useState("All");
- const [period,setPeriod] = useState("Last 6 months");
- const filtered = useMemo(()=>records.filter(r=>(status==="All"||r.status===status)&&`${r.id} ${r.team} ${r.owner}`.toLowerCase().includes(query.toLowerCase())),[status,query]);
- const stats = [{label:"Operational score",value:"86.4%",change:"+4.2%",icon:<Activity/>,positive:true},{label:"Active initiatives",value:"24",change:"+3 this month",icon:<CheckCircle2/>,positive:true},{label:"Team capacity",value:"78%",change:"−2.1%",icon:<Users/>,positive:false},{label:"Budget utilization",value:"64%",change:"Within plan",icon:<Wallet/>,positive:true}];
- return <div className="app-shell">
-  <header className="topbar"><div className="brand"><span className="brand-mark">A</span><span>Arrowstack<span style={{color:"#657ce0"}}> / Ops</span><small className="muted" style={{display:"block",fontSize:".7rem",fontWeight:500}}>Operations overview · illustrative data</small></span></div><span className="pill">DEMO DATA</span></header>
-  <div style={{display:"flex",gap:28,alignItems:"flex-start"}}><aside className="panel" style={{width:190,flexShrink:0,position:"sticky",top:18}}><p className="eyebrow">Workspace</p>{["Overview","Initiatives","Teams","Reports","Settings"].map((x,i)=><div key={x} style={{padding:"11px 9px",borderRadius:9,margin:"4px 0",background:i===0?"#eef1ff":"transparent",color:i===0?"#394fc1":"#68748a",fontWeight:i===0?800:600}}>{x}</div>)}<p className="muted" style={{fontSize:".78rem",lineHeight:1.5,marginTop:22}}>Sample interface. Values are illustrative, not live business metrics.</p></aside>
-   <main style={{flex:1,minWidth:0}}><p className="eyebrow">Monday · Executive summary</p><div className="section-head"><div><h1 className="page-title">Operations overview</h1><p className="lead" style={{margin:0}}>Understand performance, spot risk, and review work in progress.</p></div><label><span className="eyebrow" style={{display:"block",marginBottom:5}}>Reporting period</span><select className="search-input" aria-label="Reporting period" value={period} onChange={e=>setPeriod(e.target.value)}><option>Last 6 months</option><option>Last 30 days</option><option>This quarter</option></select></label></div>
-    <div className="notice" role="note"><AlertTriangle size={17} style={{verticalAlign:"middle",marginRight:8}}/>Demo dashboard: all figures and records below are mock data for UI demonstration.</div>
-    <div className="grid grid-4" style={{marginTop:18}}>{stats.map(s=><article className="panel" key={s.label}><div style={{display:"flex",justifyContent:"space-between",color:"#6a7fe1"}}>{s.icon}<span style={{color:s.positive?"#258553":"#ba5a45"}}>{s.positive?<ArrowUpRight size={16}/>:<ArrowDownRight size={16}/>}</span></div><div className="stat-value">{s.value}</div><div className="stat-label">{s.label}</div><p style={{fontSize:".8rem",color:s.positive?"#258553":"#ba5a45",marginBottom:0}}>{s.change}</p></article>)}</div>
-    <div className="grid grid-2" style={{marginTop:18}}><section className="panel"><div className="section-head"><div><h2 style={{marginBottom:4}}>Performance trend</h2><span className="muted" style={{fontSize:".82rem"}}>{period} · illustrative index</span></div><span className="pill">Trend</span></div><div style={{height:250,width:"100%"}}><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend}><defs><linearGradient id="fillOps" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7086ed" stopOpacity={.3}/><stop offset="100%" stopColor="#7086ed" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf0f5"/><XAxis dataKey="month" axisLine={false} tickLine={false}/><YAxis axisLine={false} tickLine={false} width={30}/><Tooltip/><Area type="monotone" dataKey="value" stroke="#657ce0" fill="url(#fillOps)" strokeWidth={3}/></AreaChart></ResponsiveContainer></div></section>
-    <section className="panel"><h2>Attention required</h2><p className="muted">Items with a status that may need follow-up.</p>{records.filter(r=>r.status!=="On track").map(r=><div key={r.id} style={{display:"flex",gap:12,alignItems:"center",padding:"13px 0",borderBottom:"1px solid #edf0f5"}}><span style={{color:r.status==="Delayed"?"#bd4d3e":"#bd8a22"}}><AlertTriangle size={20}/></span><div style={{flex:1}}><strong>{r.team}</strong><div className="muted" style={{fontSize:".8rem"}}>{r.id} · {r.owner}</div></div><span className="pill">{r.status}</span></div>)}</section></div>
-    <section className="panel" style={{marginTop:18}}><div className="section-head"><div><h2 style={{marginBottom:4}}>Initiative tracker</h2><p className="muted" style={{margin:0}}>Search by ID, team, or owner.</p></div><span className="pill">{filtered.length} records</span></div><div className="toolbar" style={{marginBottom:16}}><label style={{position:"relative"}}><Search size={17} style={{position:"absolute",left:12,top:13,color:"#68748a"}}/><input className="search-input" aria-label="Search records" placeholder="Search records..." value={query} onChange={e=>setQuery(e.target.value)} style={{paddingLeft:38}}/></label><label><select className="search-input" aria-label="Filter status" value={status} onChange={e=>setStatus(e.target.value)}><option>All</option><option>On track</option><option>At risk</option><option>Delayed</option></select></label></div>
-    {filtered.length===0?<div className="empty" role="status">No records match these filters.</div>:<div className="table-wrap"><table><thead><tr><th>ID</th><th>Team</th><th>Owner</th><th>Status</th><th>Progress</th><th>Updated</th></tr></thead><tbody>{filtered.map(r=><tr key={r.id}><td><strong>{r.id}</strong></td><td>{r.team}</td><td>{r.owner}</td><td><span className="pill" style={{background:r.status==="Delayed"?"#fff0ee":r.status==="At risk"?"#fff7e4":"#eaf8ef",color:r.status==="Delayed"?"#a13e32":r.status==="At risk"?"#8a6418":"#247145"}}>{r.status}</span></td><td style={{minWidth:130}}><div style={{display:"flex",alignItems:"center",gap:8}}><div className="progress" style={{flex:1}}><span style={{width:`${r.progress}%`}}/></div>{r.progress}%</div></td><td>{r.updated}</td></tr>)}</tbody></table></div>}</section>
-   </main></div><footer>Arrowstack Frontend Development Internship · Operations dashboard · Mock data only</footer>
- </div>;
+
+const trend = [
+  { month: "Jan", value: 42 },
+  { month: "Feb", value: 48 },
+  { month: "Mar", value: 45 },
+  { month: "Apr", value: 57 },
+  { month: "May", value: 62 },
+  { month: "Jun", value: 68 },
+];
+
+const views: View[] = ["Overview", "Initiatives", "Teams", "Reports", "Settings"];
+
+function filterRecords(records: RecordRow[], query: string, status: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  return records.filter(
+    (record) =>
+      (status === "All" || record.status === status) &&
+      `${record.id} ${record.team} ${record.owner}`.toLowerCase().includes(normalizedQuery),
+  );
 }
+
+function RecordFilters({
+  query,
+  onQueryChange,
+  status,
+  onStatusChange,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  status: string;
+  onStatusChange: (value: string) => void;
+}) {
+  return (
+    <div className="toolbar record-filters">
+      <label className="search-field">
+        <Search size={17} aria-hidden="true" />
+        <span className="sr-only">Search records</span>
+        <input
+          className="search-input"
+          aria-label="Search records"
+          placeholder="Search by ID, team, or owner..."
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+      </label>
+      <label>
+        <span className="sr-only">Filter status</span>
+        <select
+          className="search-input"
+          aria-label="Filter status"
+          value={status}
+          onChange={(event) => onStatusChange(event.target.value)}
+        >
+          <option>All</option>
+          <option>On track</option>
+          <option>At risk</option>
+          <option>Delayed</option>
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function RecordTable({ records }: { records: RecordRow[] }) {
+  if (records.length === 0) {
+    return <div className="empty" role="status">No records match these filters.</div>;
+  }
+
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Team</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Status</th>
+            <th scope="col">Progress</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((record) => (
+            <tr key={record.id}>
+              <td><strong>{record.id}</strong></td>
+              <td>{record.team}</td>
+              <td>{record.owner}</td>
+              <td>
+                <span className={`pill status-pill status-${record.status.toLowerCase().replace(" ", "-")}`}>
+                  {record.status}
+                </span>
+              </td>
+              <td className="progress-cell">
+                <div className="progress" role="progressbar" aria-label={`${record.team} progress`} aria-valuenow={record.progress} aria-valuemin={0} aria-valuemax={100}>
+                  <span style={{ width: `${record.progress}%` }} />
+                </div>
+                <span>{record.progress}%</span>
+              </td>
+              <td>{record.updated}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReportingPeriod({
+  period,
+  onChange,
+}: {
+  period: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="period-control">
+      <span className="eyebrow">Reporting period</span>
+      <select className="search-input" aria-label="Reporting period" value={period} onChange={(event) => onChange(event.target.value)}>
+        <option>Last 6 months</option>
+        <option>Last 30 days</option>
+        <option>This quarter</option>
+      </select>
+    </label>
+  );
+}
+
+function TrendChart({ period }: { period: string }) {
+  return (
+    <section className="panel">
+      <div className="section-head">
+        <div>
+          <h2>Performance trend</h2>
+          <span className="muted chart-caption">{period} · illustrative index</span>
+        </div>
+        <span className="pill">Trend</span>
+      </div>
+      <div className="chart-container">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={trend}>
+            <defs>
+              <linearGradient id="fillOps" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#7086ed" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#7086ed" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#edf0f5" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} />
+            <YAxis axisLine={false} tickLine={false} width={30} />
+            <Tooltip />
+            <Area type="monotone" dataKey="value" stroke="#657ce0" fill="url(#fillOps)" strokeWidth={3} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+function App() {
+  const [activeView, setActiveView] = useState<View>("Overview");
+  const [records, setRecords] = useState(initialRecords);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("All");
+  const [period, setPeriod] = useState("Last 6 months");
+  const [showInitiativeForm, setShowInitiativeForm] = useState(false);
+  const [initiativeName, setInitiativeName] = useState("");
+  const [initiativeOwner, setInitiativeOwner] = useState("");
+  const [initiativeStatus, setInitiativeStatus] = useState<Status>("On track");
+  const [preferences, setPreferences] = useState<Preferences>({
+    workspaceName: "Arrowstack",
+    weeklySummary: true,
+    priorityAlerts: true,
+  });
+  const [settingsMessage, setSettingsMessage] = useState("");
+
+  const filteredRecords = useMemo(() => filterRecords(records, query, status), [records, query, status]);
+  const teamSummaries = useMemo(() => {
+    const teams = new Map<string, RecordRow[]>();
+    records.forEach((record) => teams.set(record.team, [...(teams.get(record.team) ?? []), record]));
+    return Array.from(teams.entries()).map(([team, teamRecords]) => ({
+      name: team,
+      records: teamRecords,
+      owners: Array.from(new Set(teamRecords.map((record) => record.owner))),
+      averageProgress: Math.round(teamRecords.reduce((sum, record) => sum + record.progress, 0) / teamRecords.length),
+      attentionCount: teamRecords.filter((record) => record.status !== "On track").length,
+    }));
+  }, [records]);
+
+  function navigateTo(view: View) {
+    setActiveView(view);
+    setQuery("");
+    setStatus("All");
+    setShowInitiativeForm(false);
+  }
+
+  function addInitiative(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextNumber = Math.max(103, ...records.map((record) => Number(record.id.replace("OPS-", "")))) + 1;
+    setRecords((current) => [
+      ...current,
+      {
+        id: `OPS-${nextNumber}`,
+        team: initiativeName.trim(),
+        owner: initiativeOwner.trim(),
+        status: initiativeStatus,
+        progress: 0,
+        updated: "Just now",
+      },
+    ]);
+    setInitiativeName("");
+    setInitiativeOwner("");
+    setInitiativeStatus("On track");
+    setShowInitiativeForm(false);
+  }
+
+  function exportReport() {
+    const rows = [
+      ["ID", "Team", "Owner", "Status", "Progress", "Updated"],
+      ...filteredRecords.map((record) => [record.id, record.team, record.owner, record.status, `${record.progress}%`, record.updated]),
+    ];
+    const csv = rows.map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "arrowstack-operations-report.csv";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextPreferences = { ...preferences, workspaceName: preferences.workspaceName.trim() || "Arrowstack" };
+    setPreferences(nextPreferences);
+    setSettingsMessage("Settings saved for this browser session.");
+  }
+
+  function updatePreference<K extends keyof Preferences>(key: K, value: Preferences[K]) {
+    setPreferences((current) => ({ ...current, [key]: value }));
+    setSettingsMessage("");
+  }
+
+  const stats = [
+    { label: "Operational score", value: "86.4%", change: "+4.2%", icon: <Activity aria-hidden="true" />, positive: true },
+    { label: "Active initiatives", value: String(records.length), change: "Tracked in this demo", icon: <CheckCircle2 aria-hidden="true" />, positive: true },
+    { label: "Team capacity", value: "78%", change: "−2.1%", icon: <Users aria-hidden="true" />, positive: false },
+    { label: "Budget utilization", value: "64%", change: "Within plan", icon: <Wallet aria-hidden="true" />, positive: true },
+  ];
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark">A</span>
+          <span>
+            {preferences.workspaceName}<span className="brand-section"> / Ops</span>
+            <small className="muted brand-caption">Operations workspace · illustrative data</small>
+          </span>
+        </div>
+        <span className="pill">DEMO DATA</span>
+      </header>
+
+      <div className="dashboard-layout">
+        <aside className="panel sidebar">
+          <p className="eyebrow">Workspace</p>
+          <nav aria-label="Workspace">
+            {views.map((view) => (
+              <button
+                className={`nav-item${activeView === view ? " active" : ""}`}
+                key={view}
+                type="button"
+                aria-current={activeView === view ? "page" : undefined}
+                onClick={() => navigateTo(view)}
+              >
+                {view}
+              </button>
+            ))}
+          </nav>
+          <p className="muted sidebar-note">Sample interface. Values are illustrative, not live business metrics.</p>
+        </aside>
+
+        <main className="dashboard-main">
+          <p className="eyebrow">Monday · {activeView === "Overview" ? "Executive summary" : "Workspace"}</p>
+          <div className="section-head page-heading">
+            <div>
+              <h1 className="page-title">{activeView === "Overview" ? "Operations overview" : activeView}</h1>
+              <p className="lead page-description">
+                {activeView === "Overview" && "Understand performance, spot risk, and review work in progress."}
+                {activeView === "Initiatives" && "Track initiative owners, progress, and delivery status."}
+                {activeView === "Teams" && "Review team progress and jump into the work that needs attention."}
+                {activeView === "Reports" && "Review a summary of demo performance and export the current records."}
+                {activeView === "Settings" && "Customize the name and notification preferences for this demo workspace."}
+              </p>
+            </div>
+            {(activeView === "Overview" || activeView === "Reports") && (
+              <ReportingPeriod period={period} onChange={setPeriod} />
+            )}
+          </div>
+
+          <div className="notice" role="note">
+            <AlertTriangle size={17} aria-hidden="true" />
+            <span>Demo dashboard: all figures and records below are mock data for UI demonstration.</span>
+          </div>
+
+          {activeView === "Overview" && (
+            <>
+              <div className="grid grid-4 stats-grid">
+                {stats.map((stat) => (
+                  <article className="panel" key={stat.label}>
+                    <div className="stat-icons">
+                      <span>{stat.icon}</span>
+                      <span className={stat.positive ? "positive-change" : "negative-change"}>
+                        {stat.positive ? <ArrowUpRight size={16} aria-hidden="true" /> : <ArrowDownRight size={16} aria-hidden="true" />}
+                      </span>
+                    </div>
+                    <div className="stat-value">{stat.value}</div>
+                    <div className="stat-label">{stat.label}</div>
+                    <p className={stat.positive ? "positive-change stat-change" : "negative-change stat-change"}>{stat.change}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="grid grid-2 content-grid">
+                <TrendChart period={period} />
+                <section className="panel attention-panel">
+                  <h2>Attention required</h2>
+                  <p className="muted">Items with a status that may need follow-up.</p>
+                  {records.filter((record) => record.status !== "On track").map((record) => (
+                    <div className="attention-row" key={record.id}>
+                      <span className={record.status === "Delayed" ? "delayed-icon" : "risk-icon"}>
+                        <AlertTriangle size={20} aria-hidden="true" />
+                      </span>
+                      <div className="attention-info">
+                        <strong>{record.team}</strong>
+                        <div className="muted">{record.id} · {record.owner}</div>
+                      </div>
+                      <span className="pill">{record.status}</span>
+                    </div>
+                  ))}
+                </section>
+              </div>
+
+              <section className="panel section-panel">
+                <div className="section-head">
+                  <div>
+                    <h2>Initiative tracker</h2>
+                    <p className="muted section-subtitle">Search by ID, team, or owner.</p>
+                  </div>
+                  <span className="pill">{filteredRecords.length} records</span>
+                </div>
+                <RecordFilters query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} />
+                <RecordTable records={filteredRecords} />
+              </section>
+            </>
+          )}
+
+          {activeView === "Initiatives" && (
+            <section className="panel section-panel">
+              <div className="section-head">
+                <div>
+                  <h2>Initiative tracker</h2>
+                  <p className="muted section-subtitle">Add an initiative or filter the list by ID, team, owner, or status.</p>
+                </div>
+                <button className="btn" type="button" onClick={() => setShowInitiativeForm((show) => !show)}>
+                  <Plus size={17} aria-hidden="true" /> {showInitiativeForm ? "Cancel" : "Add initiative"}
+                </button>
+              </div>
+
+              {showInitiativeForm && (
+                <form className="initiative-form" onSubmit={addInitiative}>
+                  <label className="field">
+                    <span>Initiative / team name</span>
+                    <input autoFocus required maxLength={60} value={initiativeName} onChange={(event) => setInitiativeName(event.target.value)} placeholder="e.g. Customer research" />
+                  </label>
+                  <label className="field">
+                    <span>Owner</span>
+                    <input required maxLength={60} value={initiativeOwner} onChange={(event) => setInitiativeOwner(event.target.value)} placeholder="e.g. A. Shah" />
+                  </label>
+                  <label className="field">
+                    <span>Status</span>
+                    <select value={initiativeStatus} onChange={(event) => setInitiativeStatus(event.target.value as Status)}>
+                      <option>On track</option>
+                      <option>At risk</option>
+                      <option>Delayed</option>
+                    </select>
+                  </label>
+                  <button className="btn form-submit" type="submit">Create initiative</button>
+                </form>
+              )}
+
+              <div className="section-head list-summary">
+                <span className="muted">{filteredRecords.length} of {records.length} initiatives</span>
+              </div>
+              <RecordFilters query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} />
+              <RecordTable records={filteredRecords} />
+            </section>
+          )}
+
+          {activeView === "Teams" && (
+            <section className="grid grid-2 team-grid">
+              {teamSummaries.map((team) => (
+                <article className="panel team-card" key={team.name}>
+                  <div className="team-heading">
+                    <div className="team-avatar" aria-hidden="true">{team.name.charAt(0).toUpperCase()}</div>
+                    <div>
+                      <h2>{team.name}</h2>
+                      <p className="muted team-owners">Owner{team.owners.length === 1 ? "" : "s"}: {team.owners.join(", ")}</p>
+                    </div>
+                  </div>
+                  <div className="team-metrics">
+                    <div><strong>{team.records.length}</strong><span>initiative{team.records.length === 1 ? "" : "s"}</span></div>
+                    <div><strong>{team.averageProgress}%</strong><span>avg. progress</span></div>
+                    <div><strong>{team.attentionCount}</strong><span>need attention</span></div>
+                  </div>
+                  <div className="progress team-progress" role="progressbar" aria-label={`${team.name} average progress`} aria-valuenow={team.averageProgress} aria-valuemin={0} aria-valuemax={100}>
+                    <span style={{ width: `${team.averageProgress}%` }} />
+                  </div>
+                  <button
+                    className="btn secondary team-action"
+                    type="button"
+                    onClick={() => {
+                      setQuery(team.name);
+                      setStatus("All");
+                      setActiveView("Initiatives");
+                    }}
+                  >
+                    View initiatives
+                  </button>
+                </article>
+              ))}
+            </section>
+          )}
+
+          {activeView === "Reports" && (
+            <>
+              <div className="grid grid-3 report-metrics">
+                <article className="panel report-metric"><span className="muted">Total initiatives</span><strong>{records.length}</strong></article>
+                <article className="panel report-metric"><span className="muted">On track</span><strong>{records.filter((record) => record.status === "On track").length}</strong></article>
+                <article className="panel report-metric"><span className="muted">Average progress</span><strong>{records.length ? Math.round(records.reduce((sum, record) => sum + record.progress, 0) / records.length) : 0}%</strong></article>
+              </div>
+              <div className="grid grid-2 content-grid report-content">
+                <TrendChart period={period} />
+                <section className="panel report-export">
+                  <h2>Initiative report</h2>
+                  <p className="muted">Export the records for the selected status filter as a CSV file. Data is illustrative.</p>
+                  <RecordFilters query={query} onQueryChange={setQuery} status={status} onStatusChange={setStatus} />
+                  <p className="report-count">{filteredRecords.length} matching records will be included.</p>
+                  <button className="btn" type="button" onClick={exportReport}>
+                    <Download size={17} aria-hidden="true" /> Download CSV
+                  </button>
+                </section>
+              </div>
+              <section className="panel section-panel">
+                <div className="section-head">
+                  <div><h2>Status breakdown</h2><p className="muted section-subtitle">Initiatives matching the current report filters.</p></div>
+                  <span className="pill">{filteredRecords.length} records</span>
+                </div>
+                <RecordTable records={filteredRecords} />
+              </section>
+            </>
+          )}
+
+          {activeView === "Settings" && (
+            <form className="panel settings-panel" onSubmit={saveSettings}>
+              <h2>Workspace preferences</h2>
+              <p className="muted settings-intro">Changes apply to this demo workspace for the current browser session. No real notifications are sent.</p>
+              <label className="field settings-name">
+                <span>Workspace name</span>
+                <input required maxLength={50} value={preferences.workspaceName} onChange={(event) => updatePreference("workspaceName", event.target.value)} />
+              </label>
+              <div className="preference-list">
+                <label className="preference-option">
+                  <input type="checkbox" checked={preferences.weeklySummary} onChange={(event) => updatePreference("weeklySummary", event.target.checked)} />
+                  <span><strong>Weekly summary</strong><small>Include a weekly summary in this demo workspace.</small></span>
+                </label>
+                <label className="preference-option">
+                  <input type="checkbox" checked={preferences.priorityAlerts} onChange={(event) => updatePreference("priorityAlerts", event.target.checked)} />
+                  <span><strong>Priority alerts</strong><small>Highlight initiatives marked at risk or delayed.</small></span>
+                </label>
+              </div>
+              <div className="settings-actions">
+                <button className="btn" type="submit">Save settings</button>
+                {settingsMessage && <span className="success settings-success" role="status">{settingsMessage}</span>}
+              </div>
+            </form>
+          )}
+        </main>
+      </div>
+
+      <footer>{preferences.workspaceName} Frontend Development Internship · Operations dashboard · Mock data only</footer>
+    </div>
+  );
+}
+
+export default App;
